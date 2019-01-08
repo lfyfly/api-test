@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>接口测试</title>
+  <script src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+  <style>
+    .row {
+      margin: 10px 0;
+    }
+
+    .params-table table {
+      border: 1px solid #ccc;
+    }
+
+    .params-table table td {
+      padding: 2px 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="read-json">
+    <input id="read-json-input" type="file" accept="application/json">
+    <button id="run">开始测试</button>
+  </div>
+  <div class="test-item-show">
+    <div class="row">
+      <b class="method"></b>
+      <span class="url"></span>
+    </div>
+    <div class="params-table">
+      <table border="1" cellspacing="0">
+
+      </table>
+    </div>
+  </div>
+  <script>
+    // 读取json文件并且以表格显示展示
+    var json
+    document.querySelector('#read-json-input').addEventListener('change', function (evt) {
+      var files = evt.target.files,
+        reader = new FileReader();
+      reader.onload = function () {
+        try {
+          json = JSON.parse(this.result)
+          showTestItem(json)
+        } catch (err) {
+          console.log(err)
+          alert('JSON解析错误')
+        }
+      };
+      reader.readAsText(files[0]);
+    })
+  document.querySelector('#run').addEventListener('click',function(){
+    run(json)
+  })
+
+  </script>
+
+
+  <script>
+    // # 函数定义
+    // ## 开始测试，发送请求
+    var request = function ({ method, url, params }) {
+      if (['get', 'delete'].indexOf(method.toLowerCase()) !== -1) {
+      console.log(params)
+        return axios.get(url, { params })
+      } else {
+        return axios[method](url, params)
+      }
+    }
+
+    var run = function (json) {
+      var keys = json.params[0]
+      var paramsList = json.params.map(item => {
+        let params = {}
+        keys.forEach((key, i) => {
+          params[key] = item[i]
+        });
+
+        return { ...params, ...json.base_params }
+      })
+      
+      paramsListCopy = JSON.parse(JSON.stringify(paramsList))
+      paramsListCopy.shift()
+      return axios.all(paramsListCopy.map(params => {
+        return request({
+          method:json.method, url:json.base_url + json.url, params
+        })
+      })).then(res=>{
+        console.log(res)
+      }).catch(err=>{
+        console.log(err)
+      })
+    }
+    // ## 将json插入Dom中
+    var showTestItem = function (json) {
+      document.querySelector('.method').innerHTML = json.method
+      document.querySelector('.url').innerHTML = json.base_url + json.url
+      let paramsTableData = json.params
+      var tableHtml = paramsTableData.map(item => {
+        return `
+        <tr>
+          ${
+          item.map(v => {
+            return `<td>${v}</td>`
+          }).join('')
+          }
+        </tr>
+        `
+      }).join('')
+      document.querySelector('.params-table table').innerHTML = tableHtml
+      console.log(tableHtml)
+    }
+  </script>
+</body>
+
+</html>

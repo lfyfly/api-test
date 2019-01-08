@@ -1,0 +1,13 @@
+{
+  "base_url":"http://localhost:3000",
+  "url":"/json",
+  "method":"get",
+  "base_params":{
+    "token":"88888888"
+  },
+  "params":[
+    ["sex","name"],
+    [0,"王"],
+    [1,"李"]
+  ]
+}
