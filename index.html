@@ -47,17 +47,17 @@
       reader.onload = function () {
         try {
           json = JSON.parse(this.result)
-          showTestItem(json)
         } catch (err) {
           console.log(err)
           alert('JSON解析错误')
         }
+        showTestItem(json)
       };
       reader.readAsText(files[0]);
     })
-  document.querySelector('#run').addEventListener('click',function(){
-    run(json)
-  })
+    document.querySelector('#run').addEventListener('click', function () {
+      run(json)
+    })
 
   </script>
 
@@ -67,7 +67,7 @@
     // ## 开始测试，发送请求
     var request = function ({ method, url, params }) {
       if (['get', 'delete'].indexOf(method.toLowerCase()) !== -1) {
-      console.log(params)
+        console.log(params)
         return axios.get(url, { params })
       } else {
         return axios[method](url, params)
@@ -84,25 +84,38 @@
 
         return { ...params, ...json.base_params }
       })
-      
+
       paramsListCopy = JSON.parse(JSON.stringify(paramsList))
       paramsListCopy.shift()
-      return axios.all(paramsListCopy.map(params => {
+      queue(paramsListCopy.map((params, i) => {
         return request({
-          method:json.method, url:json.base_url + json.url, params
+          method: json.method, url: json.base_url + json.url, params
+        }).then(res => {
+          console.log(i, { res })
         })
-      })).then(res=>{
-        console.log(res)
-      }).catch(err=>{
-        console.log(err)
+      })).then(res => {
+        // console.log('end')
+        alert(1)
       })
+    }
+
+
+    function queue(arr) {
+      var sequence = Promise.resolve()
+      arr.forEach(function (item) {
+        sequence = sequence.then(item)
+      })
+      return sequence
     }
     // ## 将json插入Dom中
     var showTestItem = function (json) {
       document.querySelector('.method').innerHTML = json.method
       document.querySelector('.url').innerHTML = json.base_url + json.url
-      let paramsTableData = json.params
-      var tableHtml = paramsTableData.map(item => {
+      renderTable(json.params)
+    }
+
+    var renderTable = function (params) {
+      var tableHtml = params.map(item => {
         return `
         <tr>
           ${
