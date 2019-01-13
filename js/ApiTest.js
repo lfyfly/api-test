@@ -1,5 +1,5 @@
 class ApiTest {
-  constructor({ title, baseUrl, baseMethod, baseParams, requestList, responesFields = [], axiosConfig = {}, reqestList = [] }) {
+  constructor({ title, baseUrl, baseMethod, baseParams, requestList=[], requestFields = [], responesFields = [], axiosConfig = {}}) {
     if (!axios) throw '依赖 axios'
     if (!requestList) throw 'requestList 未配置'
 
@@ -7,6 +7,7 @@ class ApiTest {
     this.baseUrl = baseUrl
     this.baseMethod = baseMethod
     this.baseParams = baseParams  // 所有请求都会带上的参数，如token
+    this.requestFields = requestFields // 请求参数的字段
     this.responesFields = responesFields // 响应的字段
 
     // res.data[prop]
@@ -23,10 +24,9 @@ class ApiTest {
           return _this.request(requestItem)
         }
       })
-    _this.queue(requestTasks).then(resList => {
+    return _this.queue(requestTasks).then(resList => {
       this.createResponseList(resList)
       console.log('queue end ResponseList: ', this.responseList)
-
     })
   }
 
@@ -36,8 +36,27 @@ class ApiTest {
       this.responesFields.forEach(field => {
         newResItem[field] = eval(`resItem.${field}`)
       })
-      return newResItem
+      return {...resItem.config.params,...resItem.config.data, ...newResItem,_response: resItem}
     })
+  }
+
+  // 通过表头构建表格，对单一接口测试时
+  renderTable() {
+    return this.createTableHtml([...this.requestFields, ...this.responesFields], this.responseList)
+  }
+  createTableHtml(tableHeader, tableData) {
+
+    console.log({tableData})
+    let thead = `<thead><tr><td>索引</td>${tableHeader.map(field => `<td>${field}</td>`).join('')}</tr></thead>`
+    let tbody = `<tbody>
+      ${tableData.map((trData, index) => `<tr data-index="${index}"><td>${index}</td>${tableHeader.map(field =>`<td>${JSON.stringify(trData[field]) || ''}</td>`).join('')}<tr>`).join('')}
+    </tbody>`
+    let tableHtml = `<table border cellspacing="0">${thead}${tbody}</table>`
+    return tableHtml
+  }
+
+  // 每个请求单独渲染
+  renderRequestList(tableHeader, tableData) {
   }
   //  异步任务列队执行
   queue(requestTasks) {
@@ -85,6 +104,7 @@ var api = {
   "baseParams": {
     "token": "88888888"
   },
+  "requestFields": ["a", "b", "c", "d"],
   "responesFields": ["status", "message", "data.code", "data.message", "data.title"],
   "requestList": [
     { "a": 1 },
@@ -97,4 +117,18 @@ var api = {
 }
 
 var test = new ApiTest(api)
-test.run()
+
+test.run().then(res => {
+  document.querySelector('#table-container').innerHTML = test.renderTable()
+})
+
+window.onload = ()=>{
+  document.querySelector('#table-container').addEventListener('click', (e)=>{
+    let index = e.target.parentNode.getAttribute('data-index')
+    if(!index) return
+    console.log(`索引${index}`)
+    const config = test.responseList[index]._response.config
+    console.log(`${config.method} ${config.url}` )
+    console.log(test.responseList[index]._response)
+  })
+}

@@ -23,19 +23,19 @@
       margin: 10px 0;
     }
 
-    #params-table {
+    #table-container table {
       border: 1px solid #ccc;
     }
 
-    #params-table td {
+    #table-container table td {
       padding: 2px 10px;
     }
 
-    .view-data {
+     #table-container table td.index {
       cursor: pointer;
     }
 
-    .view-data:hover {
+     #table-container table td.index:hover {
       text-decoration: underline;
     }
   </style>
@@ -46,14 +46,8 @@
     <input id="read-json-input" type="file" accept="application/json">
   </div>
   <button id="run">run</button>
-  <div class="test-item-show">
-    <div class="row">
-      <b class="method"></b>
-      <span class="url"></span>
-    </div>
-    <table id="params-table" border="1" cellspacing="0">
-
-    </table>
+  <div id="table-container">
+   
   </div>
 
   <script>
