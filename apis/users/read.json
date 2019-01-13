@@ -1,13 +1,17 @@
 {
-  "base_url":"http://localhost:3000",
-  "url":"/json",
-  "method":"get",
-  "base_params":{
+  "title":"这是这个接口测试的标题",
+  "baseUrl":"http://localhost:3000",
+  "baseMethod":"get",
+  "baseParams":{
     "token":"88888888"
   },
-  "params":[
-    ["sex","name"],
-    [0,"王"],
-    [1,"李"]
+  "responesFields" : ["code","message","data"],
+  "requestList":[
+    {"a":1},
+    {"a":2},
+    {"b":1},
+    {"b":2},
+    {"a":1,"b":2},
+    {"a":2,"b":1}
   ]
 }

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>接口测试</title>
+  <script>
+    Promise.prototype.finally = function (callback) {
+      return this.then(
+        value => this.constructor.resolve(callback&&callback()).then(() => value),
+        reason => this.constructor.resolve(callback&&callback()).then(() =>  reason )
+      )
+    }
+  </script>
+  <script src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+  <style>
+    .row {
+      margin: 10px 0;
+    }
+
+    #params-table {
+      border: 1px solid #ccc;
+    }
+
+    #params-table td {
+      padding: 2px 10px;
+    }
+
+    .view-data {
+      cursor: pointer;
+    }
+
+    .view-data:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="read-json">
+    <input id="read-json-input" type="file" accept="application/json">
+  </div>
+  <button id="run">run</button>
+  <div class="test-item-show">
+    <div class="row">
+      <b class="method"></b>
+      <span class="url"></span>
+    </div>
+    <table id="params-table" border="1" cellspacing="0">
+
+    </table>
+  </div>
+  <script>
+    // 读取json文件并且以表格显示展示
+    var json
+    var resConcat
+    document.querySelector('#read-json-input').addEventListener('change', function (evt) {
+      var files = evt.target.files
+      if (files.length === 0) return
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          json = JSON.parse(this.result)
+        } catch (err) {
+          console.log(err)
+          alert('JSON解析错误')
+        }
+        document.querySelector('#read-json-input').value = '' // 让选择相同文件时可以出发change事件
+        showTestItem(json)
+      };
+      reader.readAsText(files[0]);
+    })
+    document.querySelector('#run').addEventListener('click', function () {
+      run(json)
+    })
+    document.querySelector('#params-table').addEventListener('click', function (e) {
+      let requestIndex = e.target.getAttribute('data-index')
+      if (!requestIndex) return
+      let resConcatItem = resConcat[requestIndex]
+      let data = resConcatItem[resConcatItem.length - 1]
+      console.log(requestIndex, data)
+      if (data.list && data.list instanceof Array && data.list.length > 0) console.table(data.list)
+    })
+  </script>
+
+
+  <script>
+    // # 函数定义
+    // ## 开始测试，发送请求
+    var request = function ({ method, url, params }) {
+      if (['get', 'delete'].indexOf(method.toLowerCase()) !== -1) {
+        return axios.get(url, { params })
+      } else {
+        return axios[method](url, params)
+      }
+    }
+
+    var run = function (json) {
+      var keys = json.params[0]
+      var paramsList = json.params.map(item => {
+        let params = {}
+        keys.forEach((key, i) => {
+          params[key] = item[i]
+        });
+
+        return { ...params, ...json.base_params }
+      })
+
+      paramsListCopy = JSON.parse(JSON.stringify(paramsList))
+      paramsListCopy.shift()
+      queue(paramsListCopy.map((params, i) => {
+        return function () {
+          return request({
+            method: json.method, url: json.base_url + json.url, params
+          })
+        }
+      })).finally().then(res => {
+        console.log({res})
+        // let filterRes = res.map(item => {
+        //   // return [item.status,item.data.code,JSON.stringify(item.data.data,null,2)]
+        //   return [item.status, item.data.code, item.data.data]
+        // })
+        // filterRes.unshift(['status', 'code', 'data'])
+        // resConcat = filterRes.map((item, i) => {
+        //   return json.params[i].concat(item)
+        // })
+        // console.table(resConcat)
+        // renderTable(resConcat)
+      })
+    }
+
+    // ## 异步任务列队执行
+    function queue(arr) {
+      let resArr = []
+      var sequence = Promise.resolve()
+      arr.forEach(function (item) {
+        sequence = sequence.finally().then(function (res) {
+          console.log({res})
+          resArr.push(res)
+          return item(res)
+        })
+      })
+      return sequence.finally().then(res => {
+        // console.log('end',res,resArr)
+        resArr.push(res)
+        resArr.shift()
+        return resArr
+      })
+    }
+    // ## 将json插入Dom中
+    var showTestItem = function (json) {
+      document.querySelector('.method').innerHTML = json.method
+      document.querySelector('.url').innerHTML = json.base_url + json.url
+      renderTable(json.params)
+    }
+
+    var renderTable = function (params) {
+      // 增加索引列
+
+      params = JSON.parse(JSON.stringify(params))
+
+      if (params[0][0] !== '索引') {
+        params = params.map((item, i) => {
+          if (i === 0) {
+            item.unshift('索引')
+          } else {
+            item.unshift(i)
+          }
+          return item
+        })
+      }
+
+      var tableHtml = params.map((item, i) => {
+        return `
+        <tr>
+          ${
+          item.map((v, j) => {
+            if (j === item.length - 1 && v !== 'data' && params[0][params[0].length - 1] === 'data') {
+              return `<td class="view-data" data-index="${i}">查看</td>`
+            }
+            return `<td>${v}</td>`
+          }).join('')
+          }
+        </tr>
+        `
+      }).join('')
+      document.querySelector('#params-table').innerHTML = tableHtml
+    }
+
+
+  </script>
+</body>
+
+</html>
