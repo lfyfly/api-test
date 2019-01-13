@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>request demo</title>
+  <script>
+    Promise.prototype.finally = function (callback) {
+      let P = this.constructor;
+      return this.then(
+        value  => P.resolve(callback&&callback()).then(() => value),
+        reason => P.resolve(callback&&callback()).then(() =>  reason )
+      );
+    };
+  </script>
+  <script src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+</head>
+
+<body>
+  <!-- <h1>接口测试</h1> -->
+  <!-- <button onClick="run(testItem)">run</button> -->
+  <script>
+    // demo
+    const testItem = {
+      base: {
+        method: 'get',
+        url: 'http://test.crmapi.xiaomawang.com/information/cc-users/index-master',
+        token: '88888888'
+      },
+      paramsList: [
+        {
+          a: 'a1',
+          token: undefined
+        },
+        {
+          _method: 'post',
+          a: 'a2'
+        },
+        {
+          _method: 'put',
+          _url: 'http://www.baidu.com',
+          a: 'a3'
+        },
+        {
+          a: 'a4'
+        },
+        {
+          a: 'a5'
+        },
+        {
+          a: 'a6'
+        },
+        {
+          a: 'a7'
+        },
+        {
+          a: 'a8'
+        },
+      ]
+    }
+
+    run(testItem)
+
+
+    // 定义方法
+    function run(testItem) {
+      const { url, method, token } = testItem.base
+      const { paramsList } = testItem
+      const tasks = paramsList.map(item => {
+        return function () {
+          return request({ method: item._method || method, url: item._url || url, params: { token, ...item } })
+        }
+      })
+      queue(tasks)
+    }
+
+    function request({ method, url, params }) {
+      if (['get', 'delete'].indexOf(method.toLowerCase()) !== -1) {
+        return axios[method](url, { params })
+      } else {
+        return axios[method](url, params)
+      }
+    }
+
+    function queue(arr) {
+      var sequence = Promise.resolve()
+      arr.forEach(function (item) {
+        sequence = sequence.finally().then(res=>{
+          return item(res)
+        })
+      })
+      return sequence
+    }
+
+
+  </script>
+</body>
+
+</html>
